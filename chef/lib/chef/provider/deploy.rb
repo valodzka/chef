@@ -384,7 +384,7 @@ class Chef
       end
 
       def current_release?(release)
-        @previous_release == release
+        @previous_release_path == release
       end
     end
   end
