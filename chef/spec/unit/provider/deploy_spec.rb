@@ -62,7 +62,9 @@ describe Chef::Provider::Deploy do
 
   it "should call action_rollback if there is already a deploy of this revision at release_path, and it is not the current release" do
     @provider.stub!(:all_releases).and_return([@expected_release_dir, "102021"])
+    @provider.stub!(:current_release?).with(@expected_release_dir).and_return(true)
     @provider.should_receive(:action_rollback)
+    @provider.should_receive(:current_release?)
     @provider.action_deploy
   end
   
@@ -90,8 +92,17 @@ describe Chef::Provider::Deploy do
     @provider.should_receive(:deploy)
     @provider.action_force_deploy
   end
-  
- 
+
+  it "rollbacks to previous release if error happens on deploy" do
+    @provider.stub!(:all_releases).and_return(['previous_release'])
+    @provider.stub!(:deploy).and_raise("Unexpected error")
+    @provider.stub!(:previous_release_path).and_return('previous_release')
+    @provider.should_receive(:rollback)
+    lambda { 
+      @provider.action_deploy
+    }.should raise_exception(RuntimeError, "Unexpected error")
+  end
+
   describe "on systems without broken Dir.glob results" do
     it "sets the release path to the penultimate release when one is not specified, symlinks, and rm's the last release on rollback" do
       @provider.stub!(:release_path).and_return("/my/deploy/dir/releases/3")

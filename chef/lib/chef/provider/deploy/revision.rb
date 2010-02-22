@@ -52,10 +52,14 @@ class Chef
         
         def load_cache
           begin
-            JSON.parse(Chef::FileCache.load("revision-deploys/#{new_resource.name}"))
+            validate_cache(JSON.parse(Chef::FileCache.load("revision-deploys/#{new_resource.name}")))
           rescue Chef::Exceptions::FileNotFound
             save_cache([])
           end
+        end
+
+        def validate_cache(cache)
+          cache.delete_if{|dir| !::File.exists?(dir) }
         end
         
         def save_cache(cache)

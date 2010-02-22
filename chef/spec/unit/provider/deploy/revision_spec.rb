@@ -48,18 +48,21 @@ describe Chef::Provider::Deploy::Revision do
     @provider.release_path.should == @expected_release_dir
   end
   
-  it "stores the release dir in the file cache when copying the cached repo" do
+  it "stores the release dir in the file cache when copying the cached repo" do    
     FileUtils.stub!(:mkdir_p)
     FileUtils.stub!(:cp_r)
+    @provider.stub!(:validate_cache){|c| c }
     @provider.copy_cached_repo
     @provider.stub!(:release_slug).and_return("73219b87e977d9c7ba1aa57e9ad1d88fa91a0ec2")
     @provider.load_current_resource
     @provider.copy_cached_repo
     second_release = "/my/deploy/dir/releases/73219b87e977d9c7ba1aa57e9ad1d88fa91a0ec2"
+
     @provider.all_releases.should == [@expected_release_dir,second_release]
   end
   
   it "removes a release from the file cache when it's deleted by :cleanup!" do
+    @provider.stub!(:validate_cache){|c| c }
     %w{first second third fourth fifth latest}.each do |release_name|
       @provider.send(:release_created, release_name)
     end
@@ -68,6 +71,24 @@ describe Chef::Provider::Deploy::Revision do
     FileUtils.stub!(:rm_rf)
     @provider.cleanup!
     @provider.all_releases.should == %w{second third fourth fifth latest}
+  end
+
+  it "check that cache is valid and directories exists" do
+    real_exists = ::File.method(:exists?)
+    ::File.stub!(:exists?).and_return{|file| 
+      case file 
+      when 'second' then false
+      when 'first' then true
+      else
+        real_exists[file]
+      end
+    }
+    
+    %w{first second}.each do |release_name|
+      @provider.send(:release_created, release_name)
+    end
+    
+    @provider.all_releases.should == %w{first}
   end
   
 end
