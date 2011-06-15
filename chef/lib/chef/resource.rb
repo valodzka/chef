@@ -385,7 +385,7 @@ F
     end
 
     def run_action(action)
-      Chef::Log.info("Processing #{self} action #{action} (#{defined_at})")
+      Chef::Log.debug("Processing #{self} action #{action} (#{defined_at})")
 
       # ensure that we don't leave @updated_by_last_action set to true
       # on accident

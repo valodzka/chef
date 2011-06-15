@@ -79,7 +79,7 @@ class Chef
       def action_force_deploy
         if deployed?(release_path)
           Chef::Log.info("Already deployed app at #{release_path}, forcing.")
-          FileUtils.rm_rf(release_path)
+          rm_rf(release_path)
           Chef::Log.info("#{@new_resource} forcing deploy of already deployed app at #{release_path}")
         end
 
@@ -108,7 +108,7 @@ class Chef
 
         releases_to_nuke.each do |i|
           Chef::Log.info "#{@new_resource} removing release: #{i}"
-          FileUtils.rm_rf i
+          rm_rf i
           release_deleted(i)
         end
         @new_resource.updated_by_last_action(true)
@@ -195,9 +195,13 @@ class Chef
       def cleanup!
         all_releases[0..-6].each do |old_release|
           Chef::Log.info "#{@new_resource} removing old release #{old_release}"
-          FileUtils.rm_rf(old_release)
+          rm_rf(old_release)
           release_deleted(old_release)
         end
+      end
+
+      def rm_rf(*paths)
+        run_command(:command => "rm -Rf #{paths.join(' ')}")
       end
 
       def all_releases
@@ -224,13 +228,16 @@ class Chef
 
       def copy_cached_repo
         FileUtils.mkdir_p(@new_resource.deploy_to + "/releases")
-        run_command(:command => "cp -RPp #{::File.join(@new_resource.destination, ".")} #{release_path}")
+        run_command(:command => "rsync --archive --exclude='.git' #{::File.join(@new_resource.destination, ".")} #{release_path}")
         Chef::Log.info "#{@new_resource} copied the cached checkout to #{release_path}"
         release_created(release_path)
       end
 
       def enforce_ownership
-        FileUtils.chown_R(@new_resource.user, @new_resource.group, @new_resource.deploy_to)
+        arg = @new_resource.user
+        arg = ":#{@new_resource.grup}" if @new_resource.group
+        run_command(:command => "chown -R #{arg} #{@new_resource.deploy_to}")
+        #FileUtils.chown_R(@new_resource.user, @new_resource.group, @new_resource.deploy_to)
         Chef::Log.info("#{@new_resource} set user to #{@new_resource.user}") if @new_resource.user
         Chef::Log.info("#{@new_resource} set group to #{@new_resource.group}") if @new_resource.group
       end
@@ -287,7 +294,7 @@ class Chef
 
       def purge_tempfiles_from_current_release
         log_info = @new_resource.purge_before_symlink.join(", ")
-        @new_resource.purge_before_symlink.each { |dir| FileUtils.rm_rf(release_path + "/#{dir}") }
+        rm_rf(*@new_resource.purge_before_symlink.map { |dir| release_path + "/#{dir}" })
         Chef::Log.info("#{@new_resource} purged directories in checkout #{log_info}")
       end
 
@@ -368,7 +375,7 @@ class Chef
           end
 
           Chef::Log.info "Removing failed deploy #{failed_release}"
-          FileUtils.rm_rf failed_release
+          rm_rf failed_release
           release_deleted(failed_release)
         end
         
