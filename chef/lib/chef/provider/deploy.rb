@@ -235,7 +235,7 @@ class Chef
 
       def enforce_ownership
         arg = @new_resource.user
-        arg = ":#{@new_resource.grup}" if @new_resource.group
+        arg = "#{arg}:#{@new_resource.group}" if @new_resource.group
         run_command(:command => "chown -R #{arg} #{@new_resource.deploy_to}")
         #FileUtils.chown_R(@new_resource.user, @new_resource.group, @new_resource.deploy_to)
         Chef::Log.info("#{@new_resource} set user to #{@new_resource.user}") if @new_resource.user
